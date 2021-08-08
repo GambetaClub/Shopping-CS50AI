@@ -1,6 +1,5 @@
 import csv
 import sys
-import pandas as pd
 
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
@@ -14,7 +13,7 @@ month_switcher = {
     "Mar": 2,
     "Apr": 3,
     "May": 4,
-    "Jun": 5,
+    "June": 5,
     "Jul": 6,
     "Aug": 7,
     "Sep": 8,
@@ -29,9 +28,11 @@ visitor_switcher = {
 }
 
 boolean_switcher = {
-    False: 0,
-    True: 1
+    "FALSE": 0,
+    "TRUE": 1
 }
+
+
 def main():
 
     # Check command-line arguments
@@ -84,27 +85,45 @@ def load_data(filename):
     labels should be the corresponding list of labels, where each label
     is 1 if Revenue is true, and 0 otherwise.
     """
-    col_list = ["Administrative", "Administrative_Duration", "Informational", "Informational_Duration", "ProductRelated", "ProductRelated_Duration",
-     "BounceRates", "ExitRates", "PageValues", "SpecialDay", "Month", "OperatingSystems", "Browser", "Region", "TrafficType", "VisitorType", "Weekend", "Revenue"]
-    df = pd.read_csv(filename, usecols=col_list)
-    
+
     evidence = []
     labels = []
-    for index, row in df.iterrows():
-        evidence_unit = [int(row["Administrative"]), float(row["Administrative_Duration"]), int(row["Informational"]), float(row["Informational_Duration"]), int(row["ProductRelated"]),
-            float(row["ProductRelated_Duration"]), float(row["BounceRates"]), float(row["ExitRates"]), float(row["PageValues"]), float(row["SpecialDay"]), month_switcher.get(row["Month"]), int(row["OperatingSystems"]),
-            int(row["Browser"]), int(row["Region"]), int(row["TrafficType"]), visitor_switcher.get(row["VisitorType"]), boolean_switcher.get(row["Weekend"])]
-        evidence.append(evidence_unit)
-        labels.append(boolean_switcher.get(row["Revenue"]))
-    
-    return [evidence, labels]
+
+    with open(filename, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            evidence_unit = [
+                int(row['Administrative']),
+                float(row['Administrative_Duration']),
+                int(row['Informational']),
+                float(row['Informational_Duration']),
+                int(row['ProductRelated']),
+                float(row['ProductRelated_Duration']),
+                float(row['BounceRates']),
+                float(row['ExitRates']),
+                float(row['PageValues']),
+                float(row['SpecialDay']),
+                month_switcher.get(row['Month']),
+                int(row['OperatingSystems']),
+                int(row['Browser']),
+                int(row['Region']),
+                int(row['TrafficType']),
+                boolean_switcher.get(row["Weekend"])
+            ]
+            evidence.append(evidence_unit)
+            labels.append(boolean_switcher.get(row['Revenue']))
+    return (evidence, labels)
+
 
 def train_model(evidence, labels):
     """
     Given a list of evidence lists and a list of labels, return a
     fitted k-nearest neighbor model (k=1) trained on the data.
     """
-    raise NotImplementedError
+    model = KNeighborsClassifier(n_neighbors=1)
+    model.fit(evidence, labels)
+
+    return model
 
 
 def evaluate(labels, predictions):
@@ -122,7 +141,21 @@ def evaluate(labels, predictions):
     representing the "true negative rate": the proportion of
     actual negative labels that were accurately identified.
     """
-    raise NotImplementedError
+    positives = labels.count(1)
+    negatives = labels.count(0)
+    positive_errors = 0
+    negative_errors = 0
+    for label, prediction in zip(labels, predictions):
+        if label == 1:
+            if label != prediction:
+                positive_errors += 1
+        else:
+            if label != prediction:
+                negative_errors += 1
+    sensitivity = (positives - positive_errors) / positives
+    specificity = (negatives - negative_errors) / negatives
+
+    return (sensitivity, specificity)
 
 
 if __name__ == "__main__":
